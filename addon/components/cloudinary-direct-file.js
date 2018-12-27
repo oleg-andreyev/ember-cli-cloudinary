@@ -1,6 +1,10 @@
+import Component from '@ember/component';
+import { computed, observer } from '@ember/object';
+import { htmlSafe } from '@ember/template';
+import { run, next } from '@ember/runloop';
 import Ember from 'ember';
 
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: 'input',
   classNames: ['cloudinary-fileupload'],
 
@@ -11,9 +15,9 @@ export default Ember.Component.extend({
   type: 'file',
   multiple: false,
   fieldName: null,
-  'data-cloudinary-field': Ember.computed.alias('fieldName'),
+  'data-cloudinary-field': computed.alias('fieldName'),
   accept: 'image/jpeg,image/gif,image/png',
-  style: Ember.String.htmlSafe(""),
+  style: htmlSafe(""),
 
   // Endpoint
   signatureEndpoint: null,
@@ -33,19 +37,19 @@ export default Ember.Component.extend({
     this._super(...arguments);
 
     if (!this.get('signatureEndpoint')) {
-      Ember.Logger.error('`signatureEndpoint` parameter must be specified on cloudinary-direct-file component.');
+      console.error('`signatureEndpoint` parameter must be specified on cloudinary-direct-file component.');
     }
     
     let signOptions = Object.assign({ timestamp: Date.now() / 1000 }, this.get('signOptions') || {});
 
     Ember.$.get(this.get('signatureEndpoint'), signOptions).done((response) => {
-      Ember.run(() => { this.set('data-form-data', JSON.stringify(response)); });
+      run(() => { this.set('data-form-data', JSON.stringify(response)); });
     });
   },
 
-  didSetData: Ember.observer('data-form-data', function() {
-    Ember.run.next(this, function() {
-      this.$().cloudinary_fileupload({
+  didSetData: observer('data-form-data', function() {
+    next(this, function() {
+      Ember.$().cloudinary_fileupload({
         disableImageResize: this.get('disableImageResize'),
         imageMaxWidth:      this.get('imageMaxWidth'),
         imageMaxHeight:     this.get('imageMaxHeight'),
@@ -56,37 +60,23 @@ export default Ember.Component.extend({
     });
   }),
 
+  onUploadDone() {},
+  fileProgress() {},
+  allFileProgress() {},
+  onUploadStart() {},
+  onUploadStop() {},
+  onUploadFail() {},
+  onUploadAlways() {},
+
   didInsertElement() {
-    this.$().bind('cloudinarydone', (e, data) => {
-      this.sendAction('onUploadDone', e, data);
-    });
-
-    this.$().bind('cloudinaryprogress', (e, data) => {
-      this.sendAction('fileProgress', e, data);
-    });
-
-    this.$().bind('cloudinaryprogressall', (e, data) => {
-      this.sendAction('allFileProgress', e, data);
-    });
-
-    this.$().bind('cloudinarystart', (e, data) => {
-      this.sendAction('onUploadStart', e, data);
-    });
-
-    this.$().bind('cloudinarystop', (e, data) => {
-      this.sendAction('onUploadStop', e, data);
-    });
-
-    this.$().bind('cloudinaryfail', (e, data) => {
-      this.sendAction('onUploadFail', e, data);
-    });
-
-    this.$().bind('fileuploadprocessfail', (e, data) => {
-      this.sendAction('onUploadFail', e, data);
-    });
-
-    this.$().bind('cloudinaryalways', (e, data) => {
-      this.sendAction('onUploadAlways', e, data);
-    });
+    const $ = this.$();
+    $.bind('cloudinarydone', this.onUploadDone.bind(this));
+    $.bind('cloudinaryprogress', this.fileProgress.bind(this));
+    $.bind('cloudinaryprogressall', this.allFileProgress.bind(this));
+    $.bind('cloudinarystart', this.onUploadStart.bind(this));
+    $.bind('cloudinarystop', this.onUploadStop.bind(this));
+    $.bind('cloudinaryfail', this.onUploadFail.bind(this));
+    $.bind('fileuploadprocessfail', this.onUploadFail.bind(this));
+    $.bind('cloudinaryalways', this.onUploadAlways.bind(this));
   }
 });
